@@ -192,7 +192,8 @@ def generate_tex_file(latex_top: str, output_dir: str, i: int, qcm: list[Questio
             tq += f'\n \\newline{question.possible_answers[0]}\n'
         tq += '\n\\vspace{0.5cm}'
 
-    tq = transform_image_includes(tq)
+    # Don't transform image paths - use them as-is
+    # tq = transform_image_includes(tq)
 
     subject_path = path(f'subjects/aux_files/subject{i + 1}.tex')
     write_file(subject_path, tq + '\n\\end{enumerate}\n\\end{document}')
@@ -239,8 +240,9 @@ def raise_compile_error(result: subprocess.CompletedProcess[bytes]) -> None:
     logging.error(result.stdout)
     log_file_path = os.path.join(script_dir, 'debug.log')
     with open(log_file_path, 'a', encoding='UTF8') as log_file:
-        log_file.write(result.stdout.decode('utf-8'))
-        log_file.write(result.stderr.decode('utf-8'))
+        # Use latin-1 encoding as LaTeX logs often contain Latin-1 encoded characters
+        log_file.write(result.stdout.decode('latin-1', errors='replace'))
+        log_file.write(result.stderr.decode('latin-1', errors='replace'))
     raise RuntimeError(
         f'LaTeX compilation failed\n Check the log file at {log_file_path} for more information',
     )

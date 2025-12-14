@@ -2,6 +2,7 @@ import logging
 import os
 
 from flask import Flask, jsonify, render_template, request, send_file
+from werkzeug.utils import secure_filename
 
 from qcm_generator.main_cli import generate_subjects, parse_questions
 
@@ -12,6 +13,8 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
 QUESTION_FILE = os.path.join(os.path.dirname(__file__), 'questions.txt')
 QUESTION_TEMPLATE_FILE = os.path.join(os.path.dirname(__file__), 'questions-template.txt')
+IMAGES_DIR = os.path.join(os.path.dirname(__file__), 'subjects', 'images')
+ALLOWED_IMAGE_EXTENSIONS = {'.png', '.jpg', '.jpeg', '.pdf'}
 
 
 def reload_questions(reset: bool = True) -> None:
@@ -191,6 +194,45 @@ def get_template() -> tuple[str, int]:
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/upload-image', methods=['POST'])
+def upload_image() -> tuple[str, int]:
+    """Upload an image file."""
+    try:
+        if 'image' not in request.files:
+            return jsonify({'error': 'No image file provided'}), 400
+
+        file = request.files['image']
+
+        if file.filename == '':
+            return jsonify({'error': 'No selected file'}), 400
+
+        # Check file extension
+        filename = secure_filename(file.filename)
+        file_ext = os.path.splitext(filename)[1].lower()
+
+        if file_ext not in ALLOWED_IMAGE_EXTENSIONS:
+            return jsonify({'error': f'Invalid file type. Allowed: {', '.join(ALLOWED_IMAGE_EXTENSIONS)}'}), 400
+
+        # Create images directory if it doesn't exist
+        os.makedirs(IMAGES_DIR, exist_ok=True)
+
+        # Save the file
+        file_path = os.path.join(IMAGES_DIR, filename)
+        file.save(file_path)
+
+        # Return relative path for LaTeX (relative to subjects directory)
+        relative_path = os.path.join('images', filename)
+
+        return jsonify({
+            'message': 'Image uploaded successfully',
+            'path': relative_path,
+            'filename': filename,
+        }), 200
+    except Exception as e:
+        logging.error(f'Error uploading image: {e}')
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/health')
 def health() -> tuple[str, int]:
     """Health check endpoint."""
@@ -204,6 +246,9 @@ if __name__ == '__main__':
     # Create subjects directory if it doesn't exist
     subjects_dir = os.path.join(os.path.dirname(__file__), 'subjects')
     os.makedirs(subjects_dir, exist_ok=True)
+
+    # Create images directory if it doesn't exist
+    os.makedirs(IMAGES_DIR, exist_ok=True)
 
     # Run the Flask app
     # Use debug=False in production to avoid file watching issues

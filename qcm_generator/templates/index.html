@@ -332,6 +332,12 @@
   </head>
   <body>
     <input type="file" id="fileInput" accept=".txt" style="display: none" />
+    <input
+      type="file"
+      id="imageInput"
+      accept=".png,.jpg,.jpeg,.pdf"
+      style="display: none"
+    />
     <div class="container">
       <div class="header">
         <h1>📝 QCM Generator</h1>
@@ -352,6 +358,9 @@
             </button>
             <button class="btn btn-info" onclick="validateQuestions()">
               <span>✓</span> Validate
+            </button>
+            <button class="btn btn-secondary" onclick="includeImage()">
+              <span>🖼️</span> Include Image
             </button>
             <button
               class="btn btn-primary"
@@ -432,6 +441,8 @@
       function setupFileInput() {
         const fileInput = document.getElementById("fileInput");
         fileInput.addEventListener("change", handleFileSelect);
+        const imageInput = document.getElementById("imageInput");
+        imageInput.addEventListener("change", handleImageSelect);
       }
 
       function handleFileSelect(event) {
@@ -661,6 +672,58 @@
 
       function downloadFile(filename) {
         window.location.href = `/api/download/${filename}`;
+      }
+
+      function includeImage() {
+        // Trigger image input dialog
+        document.getElementById("imageInput").click();
+      }
+
+      async function handleImageSelect(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        try {
+          showStatus("Uploading image...", "info");
+
+          const formData = new FormData();
+          formData.append("image", file);
+
+          const response = await fetch("/api/upload-image", {
+            method: "POST",
+            body: formData,
+          });
+
+          const data = await response.json();
+
+          if (response.ok) {
+            // Insert LaTeX command at cursor position
+            const editor = document.getElementById("editor");
+            const cursorPos = editor.selectionStart;
+            const textBefore = editor.value.substring(0, cursorPos);
+            const textAfter = editor.value.substring(cursorPos);
+
+            const includeCommand = `\\includegraphics[width=0.5\\textwidth]{${data.path}}\n`;
+            editor.value = textBefore + includeCommand + textAfter;
+
+            // Set cursor position after inserted text
+            editor.selectionStart = editor.selectionEnd =
+              cursorPos + includeCommand.length;
+            editor.focus();
+
+            showStatus(
+              `Image "${file.name}" uploaded and inserted!`,
+              "success"
+            );
+          } else {
+            showStatus(`Error: ${data.error}`, "error");
+          }
+        } catch (error) {
+          showStatus(`Error uploading image: ${error.message}`, "error");
+        }
+
+        // Reset file input
+        event.target.value = "";
       }
     </script>
   </body>
