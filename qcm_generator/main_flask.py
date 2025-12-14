@@ -1,7 +1,7 @@
 import logging
 import os
 
-from flask import Flask, jsonify, render_template, request, send_file
+from flask import Flask, Response, jsonify, render_template, request, send_file
 from werkzeug.utils import secure_filename
 
 from qcm_generator.main_cli import generate_subjects, parse_questions
@@ -41,7 +41,7 @@ def index() -> str:
 
 
 @app.route('/api/questions', methods=['GET'])
-def get_questions() -> tuple[str, int]:
+def get_questions() -> tuple[Response, int]:
     """Get the current questions content."""
     try:
         if not os.path.exists(QUESTION_FILE):
@@ -56,7 +56,7 @@ def get_questions() -> tuple[str, int]:
 
 
 @app.route('/api/questions', methods=['POST'])
-def save_questions() -> tuple[str, int]:
+def save_questions() -> tuple[Response, int]:
     """Save questions content."""
     try:
         data = request.get_json()
@@ -72,7 +72,7 @@ def save_questions() -> tuple[str, int]:
 
 
 @app.route('/api/questions/reset', methods=['POST'])
-def reset_questions() -> tuple[str, int]:
+def reset_questions() -> tuple[Response, int]:
     """Reset questions to template."""
     try:
         reload_questions(reset=True)
@@ -85,7 +85,7 @@ def reset_questions() -> tuple[str, int]:
 
 
 @app.route('/api/questions/validate', methods=['POST'])
-def validate_questions() -> tuple[str, int]:
+def validate_questions() -> tuple[Response, int]:
     """Validate questions format."""
     try:
         data = request.get_json()
@@ -103,22 +103,32 @@ def validate_questions() -> tuple[str, int]:
         raw_questions = lines[header_lines:]
 
         # Try to parse questions
-        questions, choices = parse_questions(raw_questions)
+        questions, _ = parse_questions(raw_questions)
 
-        return jsonify({
-            'valid': True,
-            'message': f'Valid format: {len(questions)} questions found',
-            'question_count': len(questions),
-        }), 200
+        return (
+            jsonify(
+                {
+                    'valid': True,
+                    'message': f'Valid format: {len(questions)} questions found',
+                    'question_count': len(questions),
+                },
+            ),
+            200,
+        )
     except Exception as e:
-        return jsonify({
-            'valid': False,
-            'message': str(e),
-        }), 400
+        return (
+            jsonify(
+                {
+                    'valid': False,
+                    'message': str(e),
+                },
+            ),
+            400,
+        )
 
 
 @app.route('/api/generate', methods=['POST'])
-def generate() -> tuple[str, int]:
+def generate() -> tuple[Response, int]:
     """Generate QCM PDFs."""
     try:
         data = request.get_json()
@@ -135,12 +145,18 @@ def generate() -> tuple[str, int]:
         subjects_dir = os.path.join(os.path.dirname(__file__), 'subjects')
         pdf_files = [f for f in os.listdir(subjects_dir) if f.endswith('.pdf')]
 
-        return jsonify({
-            'message': 'Subjects generated successfully',
-            'files': pdf_files,
-        }), 200
+        return (
+            jsonify(
+                {
+                    'message': 'Subjects generated successfully',
+                    'files': pdf_files,
+                },
+            ),
+            200,
+        )
     except Exception as e:
         logging.error(f'Error generating subjects: {e}')
+        error_message = str(e)
 
         # Try to read debug log if it exists
         debug_log = None
@@ -154,17 +170,22 @@ def generate() -> tuple[str, int]:
                     debug_log = '\n'.join(lines[-50:])
                     if len(debug_log) > 2000:
                         debug_log = '...\n' + debug_log[-2000:]
-            except Exception:
-                pass
+            except Exception as log_e:
+                logging.warning(f'Error reading debug log: {log_e}')
 
-        return jsonify({
-            'error': str(e),
-            'logs': debug_log,
-        }), 500
+        return (
+            jsonify(
+                {
+                    'error': error_message,
+                    'logs': debug_log,
+                },
+            ),
+            500,
+        )
 
 
 @app.route('/api/download/<filename>')
-def download(filename: str) -> tuple[str, int] | str:
+def download(filename: str) -> tuple[Response, int] | Response:
     """Download a generated PDF."""
     try:
         subjects_dir = os.path.join(os.path.dirname(__file__), 'subjects')
@@ -180,7 +201,7 @@ def download(filename: str) -> tuple[str, int] | str:
 
 
 @app.route('/api/template')
-def get_template() -> tuple[str, int]:
+def get_template() -> tuple[Response, int]:
     """Get the template file content."""
     try:
         if not os.path.exists(QUESTION_TEMPLATE_FILE):
@@ -195,7 +216,7 @@ def get_template() -> tuple[str, int]:
 
 
 @app.route('/api/upload-image', methods=['POST'])
-def upload_image() -> tuple[str, int]:
+def upload_image() -> tuple[Response, int]:
     """Upload an image file."""
     try:
         if 'image' not in request.files:
@@ -203,7 +224,7 @@ def upload_image() -> tuple[str, int]:
 
         file = request.files['image']
 
-        if file.filename == '':
+        if file.filename == '' or file.filename is None:
             return jsonify({'error': 'No selected file'}), 400
 
         # Check file extension
@@ -223,18 +244,23 @@ def upload_image() -> tuple[str, int]:
         # Return relative path for LaTeX (relative to subjects directory)
         relative_path = os.path.join('images', filename)
 
-        return jsonify({
-            'message': 'Image uploaded successfully',
-            'path': relative_path,
-            'filename': filename,
-        }), 200
+        return (
+            jsonify(
+                {
+                    'message': 'Image uploaded successfully',
+                    'path': relative_path,
+                    'filename': filename,
+                },
+            ),
+            200,
+        )
     except Exception as e:
         logging.error(f'Error uploading image: {e}')
         return jsonify({'error': str(e)}), 500
 
 
 @app.route('/health')
-def health() -> tuple[str, int]:
+def health() -> tuple[Response, int]:
     """Health check endpoint."""
     return jsonify({'status': 'healthy'}), 200
 
@@ -253,4 +279,5 @@ if __name__ == '__main__':
     # Run the Flask app
     # Use debug=False in production to avoid file watching issues
     debug_mode = os.environ.get('FLASK_DEBUG', 'False').lower() == 'true'
-    app.run(host='0.0.0.0', port=5000, debug=debug_mode)
+    host = os.environ.get('FLASK_HOST', '127.0.0.1')
+    app.run(host=host, port=5000, debug=debug_mode)

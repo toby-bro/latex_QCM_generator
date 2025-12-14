@@ -42,7 +42,7 @@ target-version = "py312"
 
 [tool.ruff.lint]
 unfixable = ["F841"]
-ignore = ["E999", "UP015", "S311", "S101"]
+ignore = ["UP015", "S311", "S101"]
 task-tags = ["TODO"]
 select = [
     "F",   # Pyflakes

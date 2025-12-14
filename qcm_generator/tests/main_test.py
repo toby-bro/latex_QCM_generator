@@ -3,7 +3,7 @@ import os
 import pytest
 from pytest_mock import MockerFixture
 
-from qcm_generator import clean, parse_questions, path, read_file, shuffle_questions, write_file
+from qcm_generator import Question, clean, parse_questions, path, read_file, shuffle_questions, write_file
 
 
 def test_path() -> None:
@@ -46,7 +46,6 @@ def test_parse_questions(
 
 
 def test_generate_qcm() -> None:
-    from qcm_generator import Question
 
     questions = [Question('What is A?', ['A1', 'A2']), Question('What is B?', ['B1', 'B2'])]
     result = shuffle_questions(questions, 2)
