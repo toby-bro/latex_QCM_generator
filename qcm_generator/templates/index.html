@@ -84,23 +84,25 @@
         flex: 1;
         padding: 30px;
         overflow: hidden;
+        position: relative;
+        min-height: 400px;
       }
 
+      /* Ace editor container */
       #editor {
         width: 100%;
         height: 100%;
-        font-family: "Courier New", monospace;
-        font-size: 14px;
+        min-height: 340px; /* account for container padding */
         border: 2px solid #e0e0e0;
         border-radius: 5px;
-        padding: 15px;
-        resize: none;
-        line-height: 1.6;
       }
-
-      #editor:focus {
-        outline: none;
-        border-color: #667eea;
+      .ace_editor {
+        font-family: "Courier New", monospace !important;
+        font-size: 14px !important;
+        line-height: 1.6 !important;
+      }
+      .ace_print-margin {
+        display: none;
       }
 
       .btn {
@@ -372,7 +374,7 @@
           </div>
 
           <div class="editor-container">
-            <textarea id="editor" placeholder="Loading questions..."></textarea>
+            <div id="editor" aria-label="Questions editor"></div>
           </div>
         </div>
 
@@ -431,12 +433,38 @@
       </div>
     </div>
 
+    <!-- Ace Editor -->
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.3/ace.js"
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    ></script>
+
     <script>
+      // Global Ace editor instance
+      let aceEditor;
+
       // Load questions on page load
       window.onload = () => {
+        initAce();
         loadQuestionsFromServer();
         setupFileInput();
       };
+
+      function initAce() {
+        aceEditor = ace.edit("editor", {
+          mode: "ace/mode/latex",
+          theme: "ace/theme/textmate",
+          wrap: true,
+        });
+        aceEditor.setOptions({
+          showPrintMargin: false,
+          autoScrollEditorIntoView: true,
+        });
+        // Ensure proper sizing on load and resize
+        setTimeout(() => aceEditor.resize(), 0);
+        window.addEventListener("resize", () => aceEditor.resize());
+      }
 
       function setupFileInput() {
         const fileInput = document.getElementById("fileInput");
@@ -451,7 +479,7 @@
 
         const reader = new FileReader();
         reader.onload = (e) => {
-          document.getElementById("editor").value = e.target.result;
+          aceEditor.setValue(e.target.result || "", -1);
           showStatus(`Questions loaded from "${file.name}"!`, "success");
         };
         reader.onerror = () => {
@@ -489,7 +517,7 @@
           const data = await response.json();
 
           if (response.ok) {
-            document.getElementById("editor").value = data.content;
+            aceEditor.setValue(data.content || "", -1);
             showStatus("Questions loaded successfully!", "success");
           } else {
             showStatus(`Error: ${data.error}`, "error", data.logs);
@@ -501,7 +529,7 @@
 
       async function saveQuestions() {
         try {
-          const content = document.getElementById("editor").value;
+          const content = aceEditor.getValue();
 
           // Try to use the modern File System Access API for "Save As" dialog
           if ("showSaveFilePicker" in window) {
@@ -569,7 +597,7 @@
           const data = await response.json();
 
           if (response.ok) {
-            document.getElementById("editor").value = data.content;
+            aceEditor.setValue(data.content || "", -1);
             showStatus("Questions reset to template!", "success");
           } else {
             showStatus(`Error: ${data.error}`, "error", data.logs);
@@ -582,7 +610,7 @@
       async function validateQuestions() {
         try {
           showStatus("Validating questions...", "info");
-          const content = document.getElementById("editor").value;
+          const content = aceEditor.getValue();
 
           const response = await fetch("/api/questions/validate", {
             method: "POST",
@@ -616,7 +644,7 @@
             "info"
           );
 
-          const content = document.getElementById("editor").value;
+          const content = aceEditor.getValue();
 
           const response = await fetch("/api/generate", {
             method: "POST",
@@ -698,18 +726,12 @@
 
           if (response.ok) {
             // Insert LaTeX command at cursor position
-            const editor = document.getElementById("editor");
-            const cursorPos = editor.selectionStart;
-            const textBefore = editor.value.substring(0, cursorPos);
-            const textAfter = editor.value.substring(cursorPos);
-
             const includeCommand = `\\includegraphics[width=0.5\\textwidth]{${data.path}}\n`;
-            editor.value = textBefore + includeCommand + textAfter;
-
-            // Set cursor position after inserted text
-            editor.selectionStart = editor.selectionEnd =
-              cursorPos + includeCommand.length;
-            editor.focus();
+            aceEditor.session.insert(
+              aceEditor.getCursorPosition(),
+              includeCommand
+            );
+            aceEditor.focus();
 
             showStatus(
               `Image "${file.name}" uploaded and inserted!`,

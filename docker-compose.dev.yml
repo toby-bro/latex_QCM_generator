@@ -30,5 +30,3 @@ services:
           path: Dockerfile
         - action: rebuild
           path: pyproject.toml
-        - action: rebuild
-          path: index.html
