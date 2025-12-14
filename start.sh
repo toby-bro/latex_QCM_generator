@@ -17,6 +17,8 @@ if ! docker info &> /dev/null; then
     exit 1
 fi
 
+cp docker-compose.dev.yml docker-compose.yml
+
 # Check if docker-compose is available
 if ! command -v docker compose &> /dev/null && ! command -v docker-compose &> /dev/null; then
     echo "❌ Error: Docker Compose is not installed."
