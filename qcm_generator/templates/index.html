@@ -331,6 +331,7 @@
     </style>
   </head>
   <body>
+    <input type="file" id="fileInput" accept=".txt" style="display: none" />
     <div class="container">
       <div class="header">
         <h1>📝 QCM Generator</h1>
@@ -424,8 +425,33 @@
     <script>
       // Load questions on page load
       window.onload = () => {
-        loadQuestions();
+        loadQuestionsFromServer();
+        setupFileInput();
       };
+
+      function setupFileInput() {
+        const fileInput = document.getElementById("fileInput");
+        fileInput.addEventListener("change", handleFileSelect);
+      }
+
+      function handleFileSelect(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          document.getElementById("editor").value = e.target.result;
+          showStatus(`Questions loaded from "${file.name}"!`, "success");
+        };
+        reader.onerror = () => {
+          showStatus(`Error reading file: ${reader.error.message}`, "error");
+        };
+        reader.readAsText(file);
+
+        // Reset file input so the same file can be loaded again
+        event.target.value = "";
+      }
+
       function showStatus(message, type = "info", logs = null) {
         const statusArea = document.getElementById("statusArea");
         const statusClass = `status-${type}`;
@@ -440,7 +466,12 @@
         statusArea.innerHTML = html;
       }
 
-      async function loadQuestions() {
+      function loadQuestions() {
+        // Trigger file input dialog
+        document.getElementById("fileInput").click();
+      }
+
+      async function loadQuestionsFromServer() {
         try {
           showStatus("Loading questions...", "info");
           const response = await fetch("/api/questions");
@@ -459,24 +490,51 @@
 
       async function saveQuestions() {
         try {
-          showStatus("Saving questions...", "info");
           const content = document.getElementById("editor").value;
 
-          const response = await fetch("/api/questions", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ content }),
-          });
+          // Try to use the modern File System Access API for "Save As" dialog
+          if ("showSaveFilePicker" in window) {
+            try {
+              const handle = await window.showSaveFilePicker({
+                suggestedName: "questions.txt",
+                types: [
+                  {
+                    description: "Text Files",
+                    accept: { "text/plain": [".txt"] },
+                  },
+                ],
+              });
 
-          const data = await response.json();
+              const writable = await handle.createWritable();
+              await writable.write(content);
+              await writable.close();
 
-          if (response.ok) {
-            showStatus("Questions saved successfully!", "success");
-          } else {
-            showStatus(`Error: ${data.error}`, "error", data.logs);
+              showStatus(`Questions saved to "${handle.name}"!`, "success");
+              return;
+            } catch (err) {
+              // User cancelled the dialog or error occurred
+              if (err.name === "AbortError") {
+                showStatus("Save cancelled", "info");
+                return;
+              }
+              throw err;
+            }
           }
+
+          // Fallback for browsers that don't support showSaveFilePicker
+          const blob = new Blob([content], { type: "text/plain" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = "questions.txt";
+
+          document.body.appendChild(a);
+          a.click();
+
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+
+          showStatus("Questions saved to your downloads folder!", "success");
         } catch (error) {
           showStatus(`Error saving questions: ${error.message}`, "error");
         }
@@ -584,7 +642,7 @@
         }
 
         let html =
-          '<div class="help-section"><h3>📄 Generated PDFs</h3><div class="file-list">';
+          '<div style="margin-top: 15px; padding: 15px; background: white; border-radius: 8px; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);"><h3 style="font-size: 1.1em; margin-bottom: 12px; color: #667eea;">📄 Generated PDFs</h3><div class="file-list">';
 
         files.forEach((file) => {
           html += `
