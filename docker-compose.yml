@@ -1,0 +1,36 @@
+services:
+  qcm-generator:
+    build: .
+    container_name: qcm-generator
+    network_mode: bridge
+    ports:
+      - "5000:5000"
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+    volumes:
+      # Mount subjects directory to persist generated PDFs
+      - ./qcm_generator/subjects:/app/qcm_generator/subjects
+      # Mount questions file to persist changes
+      - ./qcm_generator/questions.txt:/app/qcm_generator/questions.txt
+    environment:
+      - FLASK_APP=qcm_generator.main_flask
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
+    develop:
+      watch:
+        - action: sync
+          path: ./qcm_generator/
+          target: /app/qcm_generator/
+          ignore:
+            - __pycache__/
+            - "*.pyc"
+            - subjects/
+            - questions.txt
+            - debug.log
+        - action: rebuild
+          path: Dockerfile
+        - action: rebuild
+          path: pyproject.toml
+        - action: rebuild
+          path: index.html

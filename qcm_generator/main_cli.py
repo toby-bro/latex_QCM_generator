@@ -153,13 +153,26 @@ def create_latex_files(liste_qcm: list[list[Question]], latex_top: str) -> None:
     os.makedirs(output_dir, exist_ok=True)
 
     threads = []
+    errors = []
+
+    def thread_wrapper(latex_top: str, output_dir: str, i: int, qcm: list[Question]) -> None:
+        try:
+            generate_tex_file(latex_top, output_dir, i, qcm)
+        except Exception as e:
+            errors.append((i, e))
+
     for i, qcm in enumerate(liste_qcm):
-        thread = threading.Thread(target=generate_tex_file, args=(latex_top, output_dir, i, qcm))
+        thread = threading.Thread(target=thread_wrapper, args=(latex_top, output_dir, i, qcm))
         threads.append(thread)
         thread.start()
 
     for thread in threads:
         thread.join()
+
+    # If any thread had an error, raise the first one
+    if errors:
+        subject_num, error = errors[0]
+        raise RuntimeError(f'Failed to generate subject {subject_num + 1}: {error}') from error
 
 
 def generate_tex_file(latex_top: str, output_dir: str, i: int, qcm: list[Question]) -> None:

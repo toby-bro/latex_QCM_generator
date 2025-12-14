@@ -1,0 +1,53 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+*.md
+!README.md
+
+# LaTeX auxiliary files
+*.aux
+*.log
+*.out
+*.tex
+
+# Generated PDFs (keep these local, not in image)
+qcm_generator/subjects/*.pdf
+
+# Development tools
+.pre-commit-config.yaml
+Makefile
+
+# OS
+.DS_Store
+Thumbs.db

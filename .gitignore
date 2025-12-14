@@ -8,3 +8,4 @@ __pycache__/
 subjects/
 .pytest_cache/
 questions.txt
+uv.lock
