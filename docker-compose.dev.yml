@@ -15,3 +15,20 @@ services:
       - FLASK_APP=qcm_generator.main_flask
       - PYTHONUNBUFFERED=1
     restart: unless-stopped
+    develop:
+      watch:
+        - action: sync
+          path: ./qcm_generator/
+          target: /app/qcm_generator/
+          ignore:
+            - __pycache__/
+            - "*.pyc"
+            - subjects/
+            - questions.txt
+            - debug.log
+        - action: rebuild
+          path: Dockerfile
+        - action: rebuild
+          path: pyproject.toml
+        - action: rebuild
+          path: index.html

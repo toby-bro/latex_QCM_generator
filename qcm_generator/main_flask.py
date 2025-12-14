@@ -279,5 +279,5 @@ if __name__ == '__main__':
     # Run the Flask app
     # Use debug=False in production to avoid file watching issues
     debug_mode = os.environ.get('FLASK_DEBUG', 'False').lower() == 'true'
-    host = os.environ.get('FLASK_HOST', '127.0.0.1')
+    host = os.environ.get('FLASK_HOST', '0.0.0.0')  # noqa: S104
     app.run(host=host, port=5000, debug=debug_mode)
