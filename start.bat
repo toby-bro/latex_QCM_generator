@@ -12,6 +12,19 @@ if errorlevel 1 (
 )
 echo.
 
+if exist docker-compose.prod.yml (
+    REM This overwrites docker-compose.yml with the prod version
+    copy /Y docker-compose.prod.yml docker-compose.yml >nul
+    echo Production configuration applied.
+) else (
+    echo [ERROR] docker-compose.prod.yml was not found.
+    echo Cannot switch to production configuration.
+    pause
+    exit /b 1
+)
+echo.
+REM ---------------------------------------------------------
+
 REM Check if Docker is installed
 docker --version >nul 2>&1
 if errorlevel 1 (

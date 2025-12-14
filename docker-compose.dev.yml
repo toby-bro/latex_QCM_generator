@@ -1,7 +1,7 @@
 services:
   qcm-generator:
-    image: ghcr.io/${GITHUB_REPOSITORY:-toby-bro/latex_qcm_generator}:main
-    pull_policy: always
+    build:
+      context: .
     container_name: qcm-generator
     network_mode: bridge
     ports:

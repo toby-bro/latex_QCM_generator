@@ -9,3 +9,5 @@ subjects/
 .pytest_cache/
 questions.txt
 uv.lock
+docker-compose.yml
+
