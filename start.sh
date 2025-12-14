@@ -25,8 +25,9 @@ if ! command -v docker compose &> /dev/null && ! command -v docker-compose &> /d
 fi
 
 # Start Docker Compose
-echo "📦 Building and starting containers..."
-docker compose up --build -d
+echo "📦 Pulling latest image and starting containers..."
+docker compose pull
+docker compose up -d
 
 # Wait a moment for the service to start
 sleep 3

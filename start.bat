@@ -31,8 +31,9 @@ if errorlevel 1 (
 )
 
 REM Start Docker Compose
-echo Building and starting containers...
-docker compose up --build -d
+echo Pulling latest image and starting containers...
+docker compose pull
+docker compose up -d
 
 REM Wait a moment for the service to start
 timeout /t 3 >nul

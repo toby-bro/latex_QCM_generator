@@ -1,6 +1,7 @@
 services:
   qcm-generator:
-    build: .
+    image: ghcr.io/${GITHUB_REPOSITORY:-toby-bro/latex_qcm_generator}:latest
+    pull_policy: always
     container_name: qcm-generator
     network_mode: bridge
     ports:
@@ -9,10 +10,7 @@ services:
       - 8.8.8.8
       - 8.8.4.4
     volumes:
-      # Mount subjects directory to persist generated PDFs
-      - ./qcm_generator/subjects:/app/qcm_generator/subjects
-      # Mount questions file to persist changes
-      - ./qcm_generator/questions.txt:/app/qcm_generator/questions.txt
+      - ./qcm_generator/:/app/qcm_generator/
     environment:
       - FLASK_APP=qcm_generator.main_flask
       - PYTHONUNBUFFERED=1
