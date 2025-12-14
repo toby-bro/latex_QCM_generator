@@ -4,6 +4,14 @@ echo Starting QCM Generator...
 echo ========================================
 echo.
 
+REM Check for updates
+echo Checking for updates...
+git pull
+if errorlevel 1 (
+    echo [WARNING] Could not check for updates. Continuing anyway...
+)
+echo.
+
 REM Check if Docker is installed
 docker --version >nul 2>&1
 if errorlevel 1 (
